@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Gaply</title>
+<link rel="manifest" href="manifest.json">
+<style>
+  :root{
+    --bg: #f4f5f7;
+    --card: #ffffff;
+    --ink: #1c2024;
+    --ink-dim: #6b7280;
+    --ink-faint: #9aa1ab;
+    --accent: #ef5f4e;
+    --accent-track: #edeef0;
+    --line: #eceef1;
+    --danger: #ef5f4e;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  *{ box-sizing: border-box; }
+  html{ scroll-padding-top: env(safe-area-inset-top, 0px); height: 100%; }
+  body{
+    margin:0;
+    min-height: 100%;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg: #17181a;
+      --card: #212327;
+      --ink: #f0f1f3;
+      --ink-dim: #a3a9b3;
+      --ink-faint: #6c7178;
+      --accent-track: #34363b;
+      --line: #2c2e33;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg: #17181a;
+    --card: #212327;
+    --ink: #f0f1f3;
+    --ink-dim: #a3a9b3;
+    --ink-faint: #6c7178;
+    --accent-track: #34363b;
+    --line: #2c2e33;
+  }
+
+  .wrap{
+    max-width: 520px;
+    margin: 0 auto;
+    padding: 18px 16px 40px;
+  }
+
+  header{
+    display:flex;
+    align-items:center;
+    justify-content: space-between;
+    padding: 6px 2px 18px;
+  }
+  header h1{
+    font-size: 20px;
+    font-weight: 800;
+    margin:0;
+    letter-spacing: -0.3px;
+  }
+  header .activity-switch{
+    font-size: 14px;
+    color: var(--ink-dim);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 6px 2px;
+    display:flex;
+    align-items:center;
+    gap: 4px;
+  }
+  .rename-btn{
+    background: none;
+    border: none;
+    color: var(--ink-faint);
+    font-size: 15px;
+    cursor: pointer;
+    padding: 4px 6px;
+    line-height: 1;
+  }
+  .rename-btn:active{ color: var(--accent); }
+
+  .goal-card{
+    background: var(--card);
+    border-radius: 20px;
+    padding: 22px 20px 20px;
+    margin-bottom: 14px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  }
+  .goal-card-title{
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 18px;
+  }
+
+  .gauge-wrap{
+    position: relative;
+    width: 240px;
+    height: 240px;
+    margin: 0 auto;
+  }
+  .gauge-wrap svg{
+    width: 100%;
+    height: 100%;
+  }
+  .gauge-track{
+    fill: none;
+    stroke: var(--accent-track);
+    stroke-width: 16;
+    stroke-linecap: round;
+  }
+  .gauge-fill{
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 16;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.4s ease;
+  }
+  .gauge-center{
+    position: absolute;
+    left: 0; right: 0;
+    top: 28%;
+    display:flex;
+    flex-direction: column;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+  }
+  .gauge-pct{
+    font-size: 34px;
+    font-weight: 800;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+  }
+  .gauge-pct span{ font-size: 20px; font-weight: 700; }
+  .gauge-days{
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--ink);
+    margin-top: 4px;
+  }
+  .gauge-elapsed{
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink-dim);
+    margin-top: 6px;
+    font-variant-numeric: tabular-nums;
+  }
+  .gauge-goal-slot{
+    position: absolute;
+    left: 0; right: 0;
+    bottom: 6%;
+    text-align: center;
+    font-size: 13px;
+    color: var(--ink-dim);
+    font-variant-numeric: tabular-nums;
+    padding: 0 20px;
+  }
+
+  .goal-caption{
+    text-align:center;
+    margin-top: 4px;
+    font-size: 14px;
+    color: var(--ink-dim);
+  }
+  .goal-edit{
+    text-align:center;
+    margin-top: 10px;
+  }
+  .goal-edit button{
+    background:none;
+    border:none;
+    color: var(--accent);
+    font-size: 13px;
+    cursor:pointer;
+    padding: 4px 8px;
+  }
+
+  .stats-card{
+    background: var(--card);
+    border-radius: 20px;
+    padding: 6px 20px;
+    margin-bottom: 14px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  }
+  .stat-row{
+    display:flex;
+    justify-content: space-between;
+    align-items:center;
+    padding: 16px 0;
+  }
+  .stat-row + .stat-row{ border-top: 1px solid var(--line); }
+  .stat-label{ font-size: 14px; color: var(--ink-dim); }
+  .stat-value{
+    font-size: 19px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .stat-value.record{ color: var(--accent); }
+
+  .add-btn{
+    width:100%;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 16px;
+    padding: 16px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-bottom: 26px;
+  }
+  .add-btn:active{ opacity: 0.85; }
+
+  .section-title{
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--ink);
+    margin: 0 0 12px 2px;
+  }
+
+  .timeline-card{
+    background: var(--card);
+    border-radius: 20px;
+    padding: 4px 18px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  }
+  .entry{
+    padding: 14px 0;
+    display:flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .entry + .entry{ border-top: 1px solid var(--line); }
+  .entry-dot{
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent-track);
+    margin-top: 6px;
+    flex-shrink: 0;
+  }
+  .entry.is-record .entry-dot{ background: var(--accent); }
+  .entry-main{ flex: 1; display:flex; gap: 10px; }
+  .entry-text{ flex:1; }
+  .entry-date{ font-size: 14.5px; font-weight: 600; }
+  .entry-badge{
+    display:inline-block;
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--accent);
+    background: rgba(239,95,78,0.12);
+    padding: 2px 7px;
+    border-radius: 20px;
+    margin-inline-start: 6px;
+  }
+  .entry-gap{
+    font-size: 13px;
+    color: var(--ink-dim);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  .entry-del{
+    background:none;
+    border:none;
+    color: var(--ink-faint);
+    font-size: 20px;
+    line-height:1;
+    cursor:pointer;
+    padding: 0 2px;
+  }
+  .entry-del:active{ color: var(--danger); }
+
+  .empty{
+    color: var(--ink-faint);
+    font-size: 14px;
+    text-align:center;
+    padding: 34px 10px;
+  }
+
+  /* modal */
+  .overlay{
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    display:none;
+    align-items: flex-end;
+    justify-content: center;
+    z-index: 50;
+  }
+  .overlay.open{ display:flex; }
+  .sheet{
+    background: var(--card);
+    border-radius: 20px 20px 0 0;
+    width: 100%;
+    max-width: 520px;
+    padding: 20px 20px calc(24px + env(safe-area-inset-bottom, 0px));
+  }
+  .sheet h2{ font-size: 17px; margin: 0 0 16px; font-weight: 800; }
+  .field{ margin-bottom: 14px; }
+  .field label{
+    display:block;
+    font-size: 12.5px;
+    color: var(--ink-dim);
+    margin-bottom: 6px;
+  }
+  .field input{
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px 12px;
+    color: var(--ink);
+    font-size: 14.5px;
+    font-family: inherit;
+  }
+  .row2{ display:flex; gap: 10px; }
+  .row2 .field{ flex:1; }
+
+  .quick-now{
+    background: var(--bg);
+    border: 1px solid var(--line);
+    color: var(--accent);
+    border-radius: 12px;
+    padding: 12px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor:pointer;
+    margin-bottom: 16px;
+    width: 100%;
+  }
+
+  .sheet-actions{ display:flex; gap: 10px; margin-top: 6px; }
+  .btn-secondary{
+    flex:1;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    color: var(--ink-dim);
+    border-radius: 14px;
+    padding: 14px;
+    font-size: 14px;
+    cursor:pointer;
+    font-weight: 600;
+  }
+  .btn-primary{
+    flex:2;
+    background: var(--accent);
+    border: none;
+    color: #fff;
+    border-radius: 14px;
+    padding: 14px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor:pointer;
+  }
+
+  .activity-row{
+    display:flex;
+    justify-content: space-between;
+    align-items:center;
+    padding: 13px 2px;
+  }
+  .activity-row + .activity-row{ border-top: 1px solid var(--line); }
+  .activity-row .name{ font-size: 15px; font-weight: 600; cursor:pointer; flex:1; }
+  .activity-row .name.current{ color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1 id="activityTitle">Activity</h1>
+    <button class="activity-switch" id="switchBtn">Activities ▾</button>
+  </header>
+
+  <div class="goal-card">
+    <div class="goal-card-title">Current goal</div>
+    <div class="gauge-wrap">
+      <svg viewBox="0 0 240 240">
+        <path class="gauge-track" id="gaugeTrackPath" d=""></path>
+        <path class="gauge-fill" id="gaugeFill" d=""></path>
+      </svg>
+      <div class="gauge-center">
+        <div class="gauge-pct" id="gaugePct">0<span>%</span></div>
+        <div class="gauge-days" id="gaugeDays">—</div>
+        <div class="gauge-elapsed" id="gaugeElapsed">—</div>
+      </div>
+      <div class="gauge-goal-slot" id="goalValueLabel">No goal set</div>
+    </div>
+    <div class="goal-edit"><button id="editGoalBtn">Change goal</button></div>
+  </div>
+
+  <div class="stats-card">
+    <div class="stat-row">
+      <span class="stat-label">Time to goal</span>
+      <span class="stat-value" id="goalCaption">—</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">Record (longest gap)</span>
+      <span class="stat-value record" id="recordNumber">—</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">Average gap</span>
+      <span class="stat-value" id="avgNumber">—</span>
+    </div>
+  </div>
+
+  <button class="add-btn" id="openAdd">Log a new time</button>
+
+  <div class="section-title">History</div>
+  <div id="timelineWrap" class="timeline-card">
+    <div class="empty">Nothing logged yet. Add your first entry.</div>
+  </div>
+
+</div>
+
+<!-- Add entry modal -->
+<div class="overlay" id="overlay">
+  <div class="sheet">
+    <h2>Log a time</h2>
+    <button class="quick-now" id="quickNow">Right now</button>
+    <div class="row2">
+      <div class="field">
+        <label>Date</label>
+        <input type="date" id="inpDate">
+      </div>
+      <div class="field">
+        <label>Time</label>
+        <input type="time" id="inpTime">
+      </div>
+    </div>
+    <div class="sheet-actions">
+      <button class="btn-secondary" id="cancelAdd">Cancel</button>
+      <button class="btn-primary" id="saveAdd">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Activity switch modal -->
+<div class="overlay" id="overlayAct">
+  <div class="sheet">
+    <h2>Activities</h2>
+    <div id="activityList" style="margin-bottom:16px;"></div>
+    <div class="field">
+      <label>New activity</label>
+      <input type="text" id="newActName" placeholder="e.g. Wash the car">
+    </div>
+    <div class="sheet-actions">
+      <button class="btn-secondary" id="cancelAct">Close</button>
+      <button class="btn-primary" id="createAct">Add activity</button>
+    </div>
+  </div>
+</div>
+
+<!-- Goal edit modal -->
+<div class="overlay" id="overlayGoal">
+  <div class="sheet">
+    <h2>Set your goal</h2>
+    <div class="row2">
+      <div class="field">
+        <label>Days</label>
+        <input type="number" id="goalValue" min="1" value="7">
+      </div>
+    </div>
+    <div class="sheet-actions">
+      <button class="btn-secondary" id="cancelGoal">Cancel</button>
+      <button class="btn-primary" id="saveGoal">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Rename activity modal -->
+<div class="overlay" id="overlayRename">
+  <div class="sheet">
+    <h2>Rename activity</h2>
+    <div class="field">
+      <label>Name</label>
+      <input type="text" id="renameValue" placeholder="Activity name">
+    </div>
+    <div class="sheet-actions">
+      <button class="btn-secondary" id="cancelRename">Cancel</button>
+      <button class="btn-primary" id="saveRename">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var STORAGE_KEY = "gaply_v1";
+  var state = null;
+  var tickHandle = null;
+
+  // Open-arc gauge geometry: a ring with a gap at the bottom (like a speedometer).
+  // Arc sweeps from START_ANGLE to END_ANGLE (degrees, 0 = right, 90 = down, clockwise).
+  var GAUGE_CX = 120, GAUGE_CY = 120, GAUGE_R = 100;
+  var START_ANGLE = 135;   // bottom-left
+  var END_ANGLE = 45;      // bottom-right (going clockwise through top = 270° sweep)
+  var SWEEP_DEG = 270;
+
+  function polarToXY(cx, cy, r, angleDeg){
+    var rad = angleDeg * Math.PI / 180;
+    return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+  }
+
+  function describeArc(cx, cy, r, startDeg, endDeg){
+    var start = polarToXY(cx, cy, r, startDeg);
+    var end = polarToXY(cx, cy, r, endDeg);
+    var largeArcFlag = (endDeg - startDeg + 360) % 360 <= 180 ? 0 : 1;
+    return [
+      "M", start.x, start.y,
+      "A", r, r, 0, largeArcFlag, 1, end.x, end.y
+    ].join(" ");
+  }
+
+  function setupGaugeTrack(){
+    var trackPath = document.getElementById('gaugeTrackPath');
+    trackPath.setAttribute('d', describeArc(GAUGE_CX, GAUGE_CY, GAUGE_R, START_ANGLE, END_ANGLE));
+  }
+
+  function setGaugeFillPct(pct){
+    // pct: 0-100. Fill sweeps from START_ANGLE clockwise up to pct% of SWEEP_DEG.
+    var fillPath = document.getElementById('gaugeFill');
+    if(pct <= 0){
+      fillPath.setAttribute('d', '');
+      return;
+    }
+    var sweep = SWEEP_DEG * Math.min(pct, 100) / 100;
+    var endDeg = START_ANGLE + sweep;
+    fillPath.setAttribute('d', describeArc(GAUGE_CX, GAUGE_CY, GAUGE_R, START_ANGLE, endDeg));
+  }
+
+  function loadState(){
+    try{
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if(raw){
+        var parsed = JSON.parse(raw);
+        parsed.activities.forEach(function(a){
+          if(!a.goalDays) a.goalDays = 7;
+        });
+        return parsed;
+      }
+    }catch(e){}
+    var defaultAct = { id: uid(), name: "My activity", entries: [], goalDays: 7 };
+    return { activities: [defaultAct], currentId: defaultAct.id };
+  }
+
+  function saveState(){
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+    catch(e){ console.error("save failed", e); }
+  }
+
+  function uid(){
+    return Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+  }
+
+  function getCurrentActivity(){
+    var a = state.activities.find(function(x){ return x.id === state.currentId; });
+    if(!a){ a = state.activities[0]; state.currentId = a ? a.id : null; }
+    return a;
+  }
+
+  function sortedEntries(act){
+    return act.entries.slice().sort(function(a,b){ return b.ts - a.ts; }); // newest first
+  }
+
+  function pad2(n){ return n < 10 ? '0'+n : ''+n; }
+
+  function formatDurationLong(ms){
+    if(ms < 0) ms = 0;
+    var totalSeconds = Math.floor(ms/1000);
+    var days = Math.floor(totalSeconds / 86400);
+    var hours = Math.floor((totalSeconds % 86400)/3600);
+    var minutes = Math.floor((totalSeconds % 3600)/60);
+    var seconds = totalSeconds % 60;
+    var parts = [];
+    if(days > 0) parts.push(days + "d");
+    parts.push(pad2(hours) + "h");
+    parts.push(pad2(minutes) + "m");
+    parts.push(pad2(seconds) + "s");
+    return parts.join(" ");
+  }
+
+  function formatDurationShort(ms){
+    if(ms < 0) ms = 0;
+    var totalSeconds = Math.floor(ms / 1000);
+    var days = Math.floor(totalSeconds / 86400);
+    var hours = Math.floor((totalSeconds % 86400) / 3600);
+    var minutes = Math.floor((totalSeconds % 3600) / 60);
+    var seconds = totalSeconds % 60;
+    if(days > 0) return days + "d " + hours + "h";
+    if(hours > 0) return hours + "h " + minutes + "m";
+    if(minutes > 0) return minutes + "m " + seconds + "s";
+    return seconds + "s";
+  }
+
+  function formatGoalDays(days){
+    if(days === 1) return '1 day';
+    if(Number.isInteger(days)) return days + ' days';
+    return days + ' days';
+  }
+
+  function formatCountdown(ms){
+    if(ms < 0) ms = 0;
+    var totalSeconds = Math.floor(ms / 1000);
+    var days = Math.floor(totalSeconds / 86400);
+    var hours = Math.floor((totalSeconds % 86400) / 3600);
+    var minutes = Math.floor((totalSeconds % 3600) / 60);
+    var seconds = totalSeconds % 60;
+    var parts = [];
+    if(days > 0) parts.push(days + "d");
+    if(days > 0 || hours > 0) parts.push(hours + "h");
+    if(days > 0 || hours > 0 || minutes > 0) parts.push(minutes + "m");
+    parts.push(seconds + "s");
+    return parts.join(" ");
+  }
+
+  function formatDate(ts){
+    var d = new Date(ts);
+    try{
+      return new Intl.DateTimeFormat('en-US', {
+        year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'
+      }).format(d);
+    }catch(e){
+      return d.toLocaleString();
+    }
+  }
+
+  // returns array of gap durations (ms) between consecutive entries
+  function computeGaps(entriesNewestFirst){
+    var gaps = [];
+    for(var i=0;i<entriesNewestFirst.length-1;i++){
+      gaps.push(entriesNewestFirst[i].ts - entriesNewestFirst[i+1].ts);
+    }
+    return gaps; // gaps[0] = most recent gap
+  }
+
+  function render(){
+    var act = getCurrentActivity();
+    document.getElementById('activityTitle').textContent = act ? act.name : "Activity";
+
+    var entries = act ? sortedEntries(act) : [];
+    var timelineWrap = document.getElementById('timelineWrap');
+    var goalCaption = document.getElementById('goalCaption');
+    var recordNumber = document.getElementById('recordNumber');
+    var gaugePct = document.getElementById('gaugePct');
+    var gaugeDays = document.getElementById('gaugeDays');
+    var gaugeFill = document.getElementById('gaugeFill');
+
+    if(entries.length === 0){
+      timelineWrap.innerHTML = '<div class="empty">Nothing logged yet. Add your first entry.</div>';
+      goalCaption.textContent = "—";
+      document.getElementById('goalValueLabel').textContent = 'Goal: ' + formatGoalDays(act ? (act.goalDays || 7) : 7);
+      recordNumber.textContent = "—";
+      document.getElementById('avgNumber').textContent = "—";
+      gaugePct.innerHTML = '0<span>%</span>';
+      gaugeDays.textContent = "—";
+      setGaugeFillPct(0);
+      stopTick();
+      document.getElementById('liveNumber').textContent = "—";
+      return;
+    }
+
+    var gaps = computeGaps(entries);
+    var record = gaps.length > 0 ? Math.max.apply(null, gaps) : 0;
+
+    if(gaps.length > 0){
+      recordNumber.textContent = formatDurationShort(record);
+      var avgMs = gaps.reduce(function(a,b){ return a+b; }, 0) / gaps.length;
+      document.getElementById('avgNumber').textContent = formatDurationShort(avgMs);
+    } else {
+      recordNumber.textContent = "—";
+      document.getElementById('avgNumber').textContent = "—";
+    }
+
+    // timeline list (newest first), each shows gap to the NEXT older entry
+    var html = "";
+    for(var j=0;j<entries.length;j++){
+      var e = entries[j];
+      var gapHtml, isRecordEntry = false;
+      if(j < entries.length-1){
+        var gapMs = e.ts - entries[j+1].ts;
+        isRecordEntry = gaps.length > 0 && gapMs === record;
+        gapHtml = '<span class="entry-gap">+' + formatDurationShort(gapMs) + '</span>';
+      } else {
+        gapHtml = '<span class="entry-gap">First entry</span>';
+      }
+      html += '<div class="entry'+(isRecordEntry?' is-record':'')+'" data-id="'+e.id+'">'+
+        '<div class="entry-dot"></div>'+
+        '<div class="entry-main">'+
+          '<div class="entry-text">'+
+            '<div class="entry-date">'+formatDate(e.ts)+(isRecordEntry ? '<span class="entry-badge">Record</span>' : '')+'</div>'+
+          '</div>'+
+        '</div>'+
+        gapHtml+
+        '<button class="entry-del" data-del="'+e.id+'" aria-label="Delete">×</button>'+
+      '</div>';
+    }
+    timelineWrap.innerHTML = html;
+
+    Array.prototype.forEach.call(timelineWrap.querySelectorAll('[data-del]'), function(btn){
+      btn.addEventListener('click', function(ev){
+        ev.preventDefault();
+        ev.stopPropagation();
+        var id = this.getAttribute('data-del');
+        if(confirm('Delete this entry?')){
+          var currentAct = getCurrentActivity();
+          currentAct.entries = currentAct.entries.filter(function(x){ return x.id !== id; });
+          saveState();
+          render();
+        }
+      });
+    });
+
+    startTick();
+    tickNow();
+  }
+
+  function tickNow(){
+    var act = getCurrentActivity();
+    if(!act) return;
+    var entries = sortedEntries(act);
+    if(entries.length === 0) return;
+    var lastTs = entries[0].ts;
+    var now = Date.now();
+    var diff = now - lastTs;
+    if(diff < 0) diff = 0;
+
+    document.getElementById('gaugeElapsed').textContent = formatDurationLong(diff);
+
+    // gauge: percent of goal reached
+    var goalMs = (act.goalDays || 7) * 86400000;
+    var pct = goalMs > 0 ? Math.min(100, (diff / goalMs) * 100) : 0;
+    var pctRounded = Math.floor(pct * 10) / 10;
+
+    document.getElementById('gaugePct').innerHTML = pctRounded.toFixed(1) + '<span>%</span>';
+
+    var totalDays = Math.floor(diff / 86400000);
+    document.getElementById('gaugeDays').textContent = totalDays + (totalDays === 1 ? ' day' : ' days');
+
+    setGaugeFillPct(pct);
+
+    document.getElementById('goalValueLabel').textContent = 'Goal: ' + formatGoalDays(act.goalDays || 7);
+
+    var goalCaption = document.getElementById('goalCaption');
+    if(pct >= 100){
+      goalCaption.textContent = 'Reached 🎉';
+    } else {
+      var remain = goalMs - diff;
+      goalCaption.textContent = formatCountdown(remain);
+    }
+  }
+
+  function startTick(){
+    stopTick();
+    tickHandle = setInterval(tickNow, 1000);
+  }
+  function stopTick(){
+    if(tickHandle){ clearInterval(tickHandle); tickHandle = null; }
+  }
+
+  function renderActivityList(){
+    var wrap = document.getElementById('activityList');
+    wrap.innerHTML = "";
+    state.activities.forEach(function(act){
+      var row = document.createElement('div');
+      row.className = 'activity-row';
+      var isCurrent = act.id === state.currentId;
+      var nameSpan = document.createElement('span');
+      nameSpan.className = 'name' + (isCurrent ? ' current' : '');
+      nameSpan.textContent = act.name + (isCurrent ? ' (active)' : '');
+      nameSpan.addEventListener('click', function(){
+        state.currentId = act.id;
+        saveState();
+        closeActOverlay();
+        render();
+      });
+      row.appendChild(nameSpan);
+
+      var editBtn = document.createElement('button');
+      editBtn.className = 'rename-btn';
+      editBtn.textContent = '✎';
+      editBtn.setAttribute('aria-label', 'Rename ' + act.name);
+      editBtn.addEventListener('click', function(ev){
+        ev.preventDefault();
+        ev.stopPropagation();
+        openRenameOverlay(act.id);
+      });
+      row.appendChild(editBtn);
+
+      if(state.activities.length > 1){
+        var delBtn = document.createElement('button');
+        delBtn.className = 'entry-del';
+        delBtn.textContent = '×';
+        delBtn.addEventListener('click', function(ev){
+          ev.preventDefault();
+          ev.stopPropagation();
+          if(confirm('Delete this activity and its whole history?')){
+            state.activities = state.activities.filter(function(x){ return x.id !== act.id; });
+            if(state.currentId === act.id){
+              state.currentId = state.activities.length ? state.activities[0].id : null;
+            }
+            saveState();
+            renderActivityList();
+            render();
+          }
+        });
+        row.appendChild(delBtn);
+      }
+      wrap.appendChild(row);
+    });
+  }
+
+  // ---- modal handling ----
+  var overlay = document.getElementById('overlay');
+  var overlayAct = document.getElementById('overlayAct');
+  var overlayGoal = document.getElementById('overlayGoal');
+  var overlayRename = document.getElementById('overlayRename');
+
+  function pad(n){ return n < 10 ? '0'+n : ''+n; }
+
+  function openAddOverlay(){
+    var now = new Date();
+    document.getElementById('inpDate').value = now.getFullYear()+'-'+pad(now.getMonth()+1)+'-'+pad(now.getDate());
+    document.getElementById('inpTime').value = pad(now.getHours())+':'+pad(now.getMinutes());
+    overlay.classList.add('open');
+  }
+  function closeAddOverlay(){ overlay.classList.remove('open'); }
+
+  function openActOverlay(){
+    renderActivityList();
+    document.getElementById('newActName').value = "";
+    overlayAct.classList.add('open');
+  }
+  function closeActOverlay(){ overlayAct.classList.remove('open'); }
+
+  function openGoalOverlay(){
+    var act = getCurrentActivity();
+    document.getElementById('goalValue').value = act ? (act.goalDays || 7) : 7;
+    overlayGoal.classList.add('open');
+  }
+  function closeGoalOverlay(){ overlayGoal.classList.remove('open'); }
+
+  var renamingActId = null;
+
+  function openRenameOverlay(actId){
+    var act = state.activities.find(function(x){ return x.id === actId; }) || getCurrentActivity();
+    renamingActId = act ? act.id : null;
+    document.getElementById('renameValue').value = act ? act.name : "";
+    overlayRename.classList.add('open');
+  }
+  function closeRenameOverlay(){ overlayRename.classList.remove('open'); }
+
+  document.getElementById('openAdd').addEventListener('click', openAddOverlay);
+  document.getElementById('cancelAdd').addEventListener('click', closeAddOverlay);
+  overlay.addEventListener('click', function(e){ if(e.target === overlay) closeAddOverlay(); });
+
+  document.getElementById('switchBtn').addEventListener('click', openActOverlay);
+  document.getElementById('cancelAct').addEventListener('click', closeActOverlay);
+  overlayAct.addEventListener('click', function(e){ if(e.target === overlayAct) closeActOverlay(); });
+
+  document.getElementById('editGoalBtn').addEventListener('click', openGoalOverlay);
+  document.getElementById('cancelGoal').addEventListener('click', closeGoalOverlay);
+  overlayGoal.addEventListener('click', function(e){ if(e.target === overlayGoal) closeGoalOverlay(); });
+
+  document.getElementById('cancelRename').addEventListener('click', closeRenameOverlay);
+  overlayRename.addEventListener('click', function(e){ if(e.target === overlayRename) closeRenameOverlay(); });
+
+  document.getElementById('saveRename').addEventListener('click', function(){
+    var name = document.getElementById('renameValue').value.trim();
+    if(!name){ alert('Enter a name.'); return; }
+    var act = state.activities.find(function(x){ return x.id === renamingActId; });
+    if(!act) return;
+    act.name = name;
+    saveState();
+    closeRenameOverlay();
+    renderActivityList();
+    render();
+  });
+
+  document.getElementById('saveGoal').addEventListener('click', function(){
+    var val = parseFloat(document.getElementById('goalValue').value);
+    if(isNaN(val) || val <= 0){ alert('Enter a valid number.'); return; }
+    var act = getCurrentActivity();
+    if(!act) return;
+    act.goalDays = val;
+    saveState();
+    closeGoalOverlay();
+    tickNow();
+  });
+
+  document.getElementById('quickNow').addEventListener('click', function(){
+    var now = new Date();
+    document.getElementById('inpDate').value = now.getFullYear()+'-'+pad(now.getMonth()+1)+'-'+pad(now.getDate());
+    document.getElementById('inpTime').value = pad(now.getHours())+':'+pad(now.getMinutes());
+  });
+
+  document.getElementById('saveAdd').addEventListener('click', function(){
+    var dateVal = document.getElementById('inpDate').value;
+    var timeVal = document.getElementById('inpTime').value;
+    if(!dateVal || !timeVal){
+      alert('Please enter a date and time.');
+      return;
+    }
+    var ts = new Date(dateVal + 'T' + timeVal + ':00').getTime();
+    if(isNaN(ts)){
+      alert('Invalid date/time.');
+      return;
+    }
+    var act = getCurrentActivity();
+    if(!act) return;
+    act.entries.push({
+      id: uid(),
+      ts: ts
+    });
+    saveState();
+    closeAddOverlay();
+    render();
+  });
+
+  document.getElementById('createAct').addEventListener('click', function(){
+    var name = document.getElementById('newActName').value.trim();
+    if(!name){ alert('Enter a name for the activity.'); return; }
+    var newAct = { id: uid(), name: name, entries: [], goalDays: 7 };
+    state.activities.push(newAct);
+    state.currentId = newAct.id;
+    saveState();
+    closeActOverlay();
+    render();
+  });
+
+  // ---- init ----
+  setupGaugeTrack();
+  state = loadState();
+  render();
+
+})();
+</script>
+</body>
+</html>
